@@ -1,0 +1,9 @@
+body {
+  margin: 0;
+  padding: 16px;
+  font-family: Arial, sans-serif;
+}
+
+#messages {
+  margin-top: 20px;
+}
