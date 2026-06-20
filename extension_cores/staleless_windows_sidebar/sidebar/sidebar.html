@@ -1,29 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assistant Side Panel</title>
+    <link rel="stylesheet" href="sidebar.css" />
+  </head>
+  <body>
+    <main class="panel-shell">
+      <header class="panel-header">
+        <div>
+          <p class="panel-eyebrow">Extension</p>
+          <h1 class="panel-title">Assistant</h1>
+        </div>
+        <button id="close" aria-label="Close panel">X</button>
+      </header>
 
-<head>
+      <section class="panel-meta">
+        <p id="context">Connected to tab</p>
+      </section>
 
-<link
-  rel="stylesheet"
-  href="sidebar.css">
+      <section class="composer">
+        <label for="message">Message</label>
+        <textarea id="message" rows="3" placeholder="Send a message to content script..."></textarea>
+        <button id="send" class="primary-button">Send</button>
+      </section>
 
-</head>
+      <section class="feed">
+        <h2>Activity</h2>
+        <div id="messages" class="messages"></div>
+      </section>
+    </main>
 
-<body>
-
-<h2>
-Assistant Sidebar
-</h2>
-
-<button id="ping">
-Send Message
-</button>
-
-<div id="messages">
-</div>
-
-<script src="sidebar.js"></script>
-
-</body>
-
+    <script src="sidebar.js"></script>
+  </body>
 </html>
