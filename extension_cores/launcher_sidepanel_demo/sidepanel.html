@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Launcher SidePanel Demo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: sans-serif;
+      background: #f8fafc;
+    }
+
+    .card {
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 16px;
+    }
+
+    #status {
+      color: #334155;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: #111827;
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h3 id="title">Launcher SidePanel Demo</h3>
+    <p id="status">Panel ready</p>
+    <button id="close-panel" data-testid="close-panel">Close Panel</button>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

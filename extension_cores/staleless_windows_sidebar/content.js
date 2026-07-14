@@ -131,6 +131,7 @@ function createSidebar() {
   iframe.style.height = "100%";
   iframe.style.border = "none";
   iframe.style.background = "#f6f8fa";
+  iframe.style.borderLeft = "1px solid #dadce0";
 
   shadow.appendChild(iframe);
 
