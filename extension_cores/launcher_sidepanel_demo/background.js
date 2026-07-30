@@ -115,15 +115,69 @@ async function getPanelStateMap() {
   return result[PANEL_STATE_KEY] || {};
 }
 
+async function notifyPanelState(tabId, isOpen) {
+  if (tabId === undefined || tabId === null) {
+    return;
+  }
+
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      type: 'PANEL_STATE_CHANGED',
+      tabId,
+      isOpen: Boolean(isOpen),
+    });
+  } catch {
+    // Content script may not exist for the current tab URL.
+  }
+}
+
+async function getLastOpenTabId() {
+  const result = await chrome.storage.session.get('side_panel_open');
+  return result?.side_panel_open?.tabId;
+}
+
 async function setPanelState(tabId, isOpen) {
   const stateMap = await getPanelStateMap();
   stateMap[String(tabId)] = Boolean(isOpen);
   await chrome.storage.session.set({ [PANEL_STATE_KEY]: stateMap });
+  await syncActiveTabPanelAvailability(tabId);
+  await notifyPanelState(tabId, isOpen);
 }
 
 async function getPanelState(tabId) {
   const stateMap = await getPanelStateMap();
   return Boolean(stateMap[String(tabId)]);
+}
+
+async function syncActiveTabPanelAvailability(tabId) {
+  if (tabId === undefined || tabId === null) {
+    return { success: false, tabId: null, enabled: false };
+  }
+
+  const enabled = await getPanelState(tabId);
+
+  await chrome.sidePanel.setOptions({
+    tabId,
+    enabled,
+    path: PANEL_PATH,
+  });
+
+  return { success: true, tabId, enabled };
+}
+
+async function clearTabPanelState(tabId) {
+  if (tabId === undefined || tabId === null) {
+    return;
+  }
+
+  const stateMap = await getPanelStateMap();
+  const key = String(tabId);
+  if (!(key in stateMap)) {
+    return;
+  }
+
+  delete stateMap[key];
+  await chrome.storage.session.set({ [PANEL_STATE_KEY]: stateMap });
 }
 
 async function closePanel(tabId) {
@@ -203,6 +257,20 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (chrome.sidePanel?.setPanelBehavior) {
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
   }
+});
+
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  void syncActiveTabPanelAvailability(tabId);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === 'complete') {
+    void syncActiveTabPanelAvailability(tabId);
+  }
+});
+
+chrome.tabs.onRemoved.addListener(tabId => {
+  void clearTabPanelState(tabId);
 });
 
 chrome.action.onClicked.addListener(async tab => {
@@ -293,6 +361,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const targetTabId = getTabIdFromCandidate(message.tabId) ?? senderTabId;
         const result = await closePanel(targetTabId);
         sendResponse(result);
+        return;
+      }
+
+      case 'PANEL_UI_CLOSED': {
+        const targetTabId = getTabIdFromCandidate(message.tabId)
+          ?? senderTabId
+          ?? (await getLastOpenTabId());
+
+        if (!targetTabId) {
+          sendResponse({ success: false, error: 'Missing tab id.' });
+          return;
+        }
+
+        await setPanelState(targetTabId, false);
+        sendResponse({ success: true, isOpen: false, tabId: targetTabId });
         return;
       }
 

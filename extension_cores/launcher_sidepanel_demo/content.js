@@ -12,6 +12,23 @@ function setLauncherLabel(button, isOpen) {
   button.title = button.textContent;
 }
 
+function getLauncherButton() {
+  return document.getElementById('launcher-sidepanel-button');
+}
+
+chrome.runtime.onMessage.addListener(message => {
+  if (!message || message.type !== 'PANEL_STATE_CHANGED') {
+    return;
+  }
+
+  const button = getLauncherButton();
+  if (!button) {
+    return;
+  }
+
+  setLauncherLabel(button, Boolean(message.isOpen));
+});
+
 async function getInitialState() {
   const response = await safeSendMessage({ type: 'GET_PANEL_STATE' });
   return Boolean(response && response.success && response.isOpen);

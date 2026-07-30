@@ -3,6 +3,32 @@ async function getActiveTabId() {
   return tabs[0]?.id;
 }
 
+let hasSentPanelClosed = false;
+
+async function notifyPanelClosed() {
+  if (hasSentPanelClosed) {
+    return;
+  }
+
+  hasSentPanelClosed = true;
+
+  let tabId;
+  try {
+    tabId = await getActiveTabId();
+  } catch {
+    tabId = undefined;
+  }
+
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'PANEL_UI_CLOSED',
+      tabId,
+    });
+  } catch {
+    // Ignore teardown-time messaging failures.
+  }
+}
+
 document.getElementById('close-panel').addEventListener('click', async () => {
   const status = document.getElementById('status');
   const tabId = await getActiveTabId();
@@ -18,4 +44,8 @@ document.getElementById('close-panel').addEventListener('click', async () => {
   }
 
   status.textContent = 'Could not close panel';
+});
+
+window.addEventListener('pagehide', () => {
+  void notifyPanelClosed();
 });

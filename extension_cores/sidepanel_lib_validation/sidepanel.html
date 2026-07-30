@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sidepanel Validation</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f6f9ff;
+        color: #111;
+      }
+
+      .wrap {
+        padding: 16px;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #e6e9ef;
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      h1 {
+        font-size: 16px;
+        margin: 0 0 10px;
+      }
+
+      .row {
+        margin: 8px 0;
+        font-size: 13px;
+      }
+
+      button {
+        border: 1px solid #222;
+        background: #fff;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      pre {
+        background: #0e1726;
+        color: #d4e2ff;
+        border-radius: 10px;
+        padding: 10px;
+        overflow: auto;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1 id="title">Sidepanel Lib Validation</h1>
+        <div id="active-tab" class="row">Active tab: resolving...</div>
+        <div id="open-state" class="row">Open state: resolving...</div>
+        <button id="refresh">Refresh State</button>
+        <h2 style="font-size: 13px; margin-top: 14px">Debug state map</h2>
+        <pre id="debug-output">{}</pre>
+      </div>
+    </div>
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>
