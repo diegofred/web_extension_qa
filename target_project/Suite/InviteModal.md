@@ -25,6 +25,9 @@ Invite modal is a modal form to send invitations with the following specificatio
   - User clicks "Send Invitation" button
   - Modal closes and shows a success message in Green banner format 
 
+- Cancel Flow
+  - Show a confirm message to close the modal
+
 - Modal success: 
   - Closes the modal and shows a success message
 - Modal error: 
