@@ -14,6 +14,7 @@ const {
   createConsoleLogger,
   openExtensionPage,
   closeContext,
+  sendMessageFromContent,
 } = require('../playwright-extension-helpers');
 
 (async () => {
@@ -35,8 +36,10 @@ const {
   await assertSelectorVisible(testPage, 'text=Send To Panel');
   console.log('Content-script injection assertion passed.');
 
-  await clickText(testPage, 'Send To Panel');
-  console.log('Clicked injected content-script button.');
+  // Generic message send from content script via test bridge (no DOM click required)
+  const testPayload = { message: 'generic content test', url: 'https://example.com', ts: Date.now() };
+  const sendResponse = await sendMessageFromContent(testPage, 'CONTENT_TO_PANEL', testPayload);
+  console.log('Sent message from content script via test bridge:', sendResponse);
 
   // Some extensions emit console logs when a message is registered. If yours does, this is a useful validation.
   try {

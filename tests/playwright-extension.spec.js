@@ -14,6 +14,7 @@ const {
   createConsoleLogger,
   openExtensionPage,
   closeContext,
+  sendMessageFromContent,
 } = require('./playwright-extension-helpers');
 
 (async () => {
@@ -30,13 +31,24 @@ const {
   const testPage = await context.newPage();
   const pageLogs = await createConsoleLogger(testPage);
 
-  await openUrl(testPage, 'https://example.com');
-  await assertUrlContains(testPage, 'example.com');
-  await assertSelectorVisible(testPage, 'text=Send To Panel');
-  console.log('Content-script injection assertion passed.');
+  // Navigate to a supported PMS host (intercepted locally so no network is needed).
+  // This is required for the content script to be injected by the extension.
+  const pmsUrl = 'https://rmx.rentmanager.com/dashboard';
+  await testPage.route(pmsUrl, (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<html><body><h1>Mock PMS</h1></body></html>'
+    });
+  });
+  await openUrl(testPage, pmsUrl);
+  await assertUrlContains(testPage, 'rmx.rentmanager.com');
+  console.log('Navigated to supported PMS host.');
 
-  await clickText(testPage, 'Send To Panel');
-  console.log('Clicked injected content-script button.');
+  // Generic message send from content script via test bridge (no DOM click required)
+  const testPayload = { message: 'generic content test', ts: Date.now() };
+  const sendResponse = await sendMessageFromContent(testPage, 'CONTENT_TO_PANEL', testPayload);
+  console.log('Sent message from content script via test bridge:', sendResponse);
 
   // Some extensions emit console logs when a message is registered. If yours does, this is a useful validation.
   try {

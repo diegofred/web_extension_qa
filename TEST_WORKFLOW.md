@@ -1,12 +1,16 @@
 # Playwright Test Creation Workflow
 
-> Main rule: build integration tests with human-readable browser steps and assertions. Do not use vitest for these extension tests.
+> Main rule: build black-box Playwright integration tests with human-readable browser steps and assertions. Do not use vitest or direct implementation-level tests for extension behavior.
+
+This workflow is extension-agnostic. Use any local unpacked extension, fixture, or test target that represents the user story. The sample extension cores in `extension_cores/` are optional examples.
+
+Before starting, read [AGENTS.md](AGENTS.md) for repository rules and use [TEST_CASE_TEMPLATE.md](TEST_CASE_TEMPLATE.md) to capture the scenario.
 
 ## Step 1
 
 Receive a user story.
 
-Example:
+Example user story:
 
 "When the user navigates to a prospect detail page, the extension should detect the page, scrape the prospect information, perform a matching request, and open the matched prospect."
 
@@ -16,15 +20,15 @@ Example:
 
 Identify:
 
-### PMS Pages
+### Pages Or Extension Contexts
 
-* Prospect Detail
+* Prospect detail page
 
-### API Endpoints
+### API Endpoints Or External Effects
 
 * prospect-match
 
-### Sidepanel Views
+### Extension Views
 
 * Prospect Matching
 
@@ -40,12 +44,12 @@ Identify:
 
 Determine Required Assets
 
-Does a PMS page already exist?
+Does a required page or extension fixture already exist?
 
 If no:
 Create one.
 
-Does an API mock already exist?
+Does a required API mock already exist?
 
 If no:
 Create one.
@@ -71,7 +75,7 @@ Avoid duplication.
 
 ---
 
-## Step 5
+## Step 4
 
 Implement Test
 
@@ -81,9 +85,7 @@ Arrange
 Act
 Assert
 
-Focus on human-level assertions: click buttons, inspect UI, validate visible text, and verify navigation state.
-
-sections.
+Focus on human-level assertions: click buttons, inspect visible UI, validate user-facing text, and verify navigation or extension state. Reuse helpers from `tests/playwright-extension-helpers.js` whenever possible.
 
 ---
 
@@ -107,8 +109,4 @@ assertNoConsoleErrors(consoleEntries)
 
 Update Documentation
 
-Add test scenario to:
-
-docs/test-scenarios.md
-
-Add fixture references if new fixtures were created.
+Document the scenario using [TEST_CASE_TEMPLATE.md](TEST_CASE_TEMPLATE.md) or the test directory's existing README. Add fixture references when new fixtures are created. Keep documentation links relative and point only to files that exist in this repository.

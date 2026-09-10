@@ -1,46 +1,48 @@
 # Playwright extension test scaffold
 
-This repository includes a Playwright test scaffold built to validate a local Chrome extension (Manifest V3) in a repeatable way.
+This repository is a reusable Playwright test scaffold for validating browser extensions in a repeatable, human-centered way. It is intentionally independent of any specific extension core or framework. The bundled extension cores are local examples and fixtures, not application dependencies.
 
-> Main rule: these are integration tests with human-level assertions, not unit tests with frameworks like vitest.
+> Main rule: use Playwright integration tests with human-level browser interactions and assertions, not unit tests that import or inspect the extension implementation directly.
 
-## Cómo funciona
+See [AGENTS.md](AGENTS.md) for repository rules, [TEST_WORKFLOW.md](TEST_WORKFLOW.md) for the test-creation process, and [TEST_CASE_TEMPLATE.md](TEST_CASE_TEMPLATE.md) for documenting scenarios.
 
-El test levantado por `tests/playwright-extension.spec.js` hace lo siguiente:
+## How It Works
 
-1. Carga Chromium con la extensión unpacked utilizando una carpeta local.
-2. Descubre el id de extensión `chrome-extension://<id>/...` mediante el protocolo CDP.
-3. Abre una página de prueba (`https://example.com`) y valida que el content script inyectado haya añadido el botón esperado.
-4. Hace clic en el botón inyectado para validar el flujo de comunicación `content script -> background -> sidepanel`.
-5. Abre directamente `sidepanel.html` desde el contexto de la extensión.
-6. Valida la presencia de elementos clave del sidepanel (`#title`, `#refresh`, `#send`, `#messages`).
-7. Solicita la apertura del sidepanel mediante un mensaje al background, similar a hacer clic en la acción de la extensión.
-8. Hace acciones en el sidepanel: clic en `Refresh` y clic en `Send To Content`.
-9. Captura y verifica errores de consola para asegurar que no hay fallos visibles.
+The test in `tests/playwright-extension.spec.js` does the following:
 
-## Archivos principales
+1. Loads Chromium with the extension unpacked from a local directory.
+2. Discovers the extension ID at `chrome-extension://<id>/...` through the CDP protocol.
+3. Opens a test page (`https://example.com`) and verifies that the injected content script added the expected button.
+4. Clicks the injected button to validate the `content script -> background -> sidepanel` communication flow.
+5. Opens `sidepanel.html` directly from the extension context.
+6. Verifies the presence of key sidepanel elements (`#title`, `#refresh`, `#send`, `#messages`).
+7. Requests that the background open the sidepanel through a message, similar to clicking the extension action.
+8. Performs actions in the sidepanel: clicking `Refresh` and clicking `Send To Content`.
+9. Captures and verifies console errors to ensure there are no visible failures.
+
+## Main Files
 
 - `tests/playwright-extension-helpers.js`
-  - Contiene helpers genéricos para lanzar Chromium con la extensión cargada.
-  - Provee funciones reutilizables: navegación, validaciones de selectores y texto, conteo de elementos y captura de consola.
-  - Está pensado para poder usarlo con esta extensión y con otras extensiones similares.
+  - Contains generic helpers for launching Chromium with the extension loaded.
+  - Provides reusable functions for navigation, selector and text validation, element counts, and console capture.
+  - Designed for use with any compatible extension.
 
 - `tests/playwright-extension.spec.js`
-  - Script de prueba específico que usa los helpers.
-  - Ejecuta una serie de aserciones genéricas sobre la inyección del content script y la interfaz del sidepanel.
+  - Generic example test script that uses the helpers.
+  - Demonstrates browser-driven assertions for content script injection and sidepanel behavior.
 
-## Qué cubre el test
+## Test Coverage
 
-- `launchExtensionContext`: arranca Chromium con `--load-extension` y `--disable-extensions-except`.
-- Detección automática del `extensionId` usando CDP.
-- Apertura de una página web normal y verificación de que el content script inyectó el botón esperado.
-- Interacción con el content script para enviar un mensaje al panel.
-- Apertura de la página de sidepanel y validación de su estructura DOM.
-- Verificación de que no haya errores de consola en el sidepanel.
+- `launchExtensionContext`: launches Chromium with `--load-extension` and `--disable-extensions-except`.
+- Automatic detection of `extensionId` using CDP.
+- Opening a regular web page and verifying that the content script injected the expected button.
+- Interaction with the content script to send a message to the panel.
+- Opening the sidepanel page and validating its DOM structure.
+- Verifying that there are no console errors in the sidepanel.
 
-## Ejecución
+## Running the Test
 
-1. Instala Playwright y Chromium en el workspace:
+1. Install Playwright and Chromium in the workspace:
 
 ```bash
 npm init -y
@@ -48,93 +50,93 @@ npm i -D playwright
 npx playwright install chromium
 ```
 
-2. Ejecuta el script de prueba genérico:
+2. Run the generic test script:
 
 ```bash
 node tests/playwright-extension.spec.js
 ```
 
-3. Para probar otra extensión, pasa la carpeta de la extensión como argumento:
+3. To test another extension, pass its directory as an argument:
 
 ```bash
 node tests/playwright-extension.spec.js ../path/to/your/extension
 ```
 
-## Pruebas de resiliencia del service worker
+## Service Worker Resilience Tests
 
-El archivo `tests/stateless_messages/playwright-extension-worker-resilience.spec.js` valida que los mensajes persistan incluso cuando el service worker se reinicia:
+The `tests/stateless_messages/playwright-extension-worker-resilience.spec.js` file verifies that messages persist even when the service worker restarts:
 
 ```bash
 node tests/stateless_messages/playwright-extension-worker-resilience.spec.js
 ```
 
-Este test:
-1. Envía mensajes desde el content script
-2. Fuerza el reinicio del service worker (cerrando el contexto del background)
-3. Envía más mensajes después del reinicio
-4. Verifica que chrome.storage.session persiste correctamente
+This test:
+1. Sends messages from the content script
+2. Forces the service worker to restart by closing the background context
+3. Sends more messages after the restart
+4. Verifies that `chrome.storage.session` persists correctly
 
-El archivo `tests/stateless_messages/playwright-extension-diagnostic.spec.js` es una herramienta de diagnóstico que inspecciona el estado de `chrome.storage.session` directamente:
+The `tests/stateless_messages/playwright-extension-diagnostic.spec.js` file is a diagnostic tool that directly inspects the state of `chrome.storage.session`:
 
 ```bash
 node tests/stateless_messages/playwright-extension-diagnostic.spec.js
 ```
 
-Esto es útil para validar que los mensajes se están almacenando correctamente en la extensión.
+This is useful for verifying that messages are being stored correctly in the extension.
 
 ## Test runner
 
-Para ejecutar todas las pruebas de forma organizada:
+To run all tests in an organized sequence:
 
 ```bash
 node tests/stateless_messages/run-all-tests.js
 ```
 
-Esto ejecutará sequencialmente:
+This runs the following tests sequentially:
 - Generic extension assertions
 - Service worker resilience tests
 - Storage diagnostic inspection
 
-## Documentación específica de pruebas
+## Test-Specific Documentation
 
-Cada extensión tiene su propia carpeta de pruebas con documentación detallada:
+Each extension has its own test directory with detailed documentation:
 
-- [tests/stateless_messages/README.md](tests/stateless_messages/README.md) — Guía completa de test cases para la extensión `stateless_messages`
+- [tests/stateless_messages/README.md](tests/stateless_messages/README.md) — Complete test case guide for the `stateless_messages` extension
 
-## Adaptación a otras extensiones
+## Adapting To Other Extensions
 
-Si tu extensión usa otros selectores o nombres de botones, modifica `tests/playwright-extension.spec.js` para:
+When testing another extension, keep the shared helpers and replace only the fixture-specific flow in the test. If the extension uses different selectors or button names, update `tests/playwright-extension.spec.js` to:
 
-- cambiar el selector del botón inyectado en el content script
-- cambiar los selectores del sidepanel (`#title`, `#refresh`, `#send`, `#messages`)
-- añadir validaciones adicionales de DOM o contenido específico
+- change the selector for the button injected by the content script
+- change the sidepanel selectors (`#title`, `#refresh`, `#send`, `#messages`)
+- add additional DOM or extension-specific content assertions
 
-También puedes reutilizar `tests/playwright-extension-helpers.js` en otros proyectos, ya que contiene utilidades genéricas de Playwright.
+You can reuse `tests/playwright-extension-helpers.js` in other projects because it contains generic Playwright utilities and does not depend on a particular extension core.
 
-## Glosario de helpers disponibles
+## Available Helper Reference
 
-- `launchExtensionContext(extensionPath, options)` — lanza Chromium con la extensión cargada y devuelve el contexto, una página inicial y el `extensionId` detectado.
-- `findExtensionId(client)` — busca un target `chrome-extension://` usando CDP y devuelve el id de extensión.
-- `openUrl(page, url, options)` — navega a una URL con tiempos de espera configurables.
-- `assertSelectorVisible(page, selector, options)` — espera a que un selector exista y sea visible.
-- `assertSelectorExists(page, selector, options)` — espera a que un selector esté presente en el DOM, aunque no sea visible.
-- `assertTextContains(page, selector, expected, options)` — valida que el texto de un selector contenga una cadena esperada.
-- `assertTextEquals(page, selector, expected, options)` — valida que el texto de un selector sea exactamente igual a una cadena esperada.
-- `assertUrlContains(page, expected, options)` — valida que la URL actual de la página contenga un fragmento esperado.
-- `assertElementCount(page, selector, expectedCount, options)` — valida la cantidad de elementos que coinciden con un selector.
-- `assertNoConsoleErrors(entries)` — valida que no existan entradas de consola con tipo `error`.
-- `clickText(page, text, options)` — hace clic en un elemento identificado por texto.
-- `clickSelector(page, selector, options)` — hace clic en un elemento identificado por selector CSS.
-- `createConsoleLogger(page)` — recopila entradas de consola y errores de página en un arreglo.
-- `assertConsoleContains(entries, expectedText)` — verifica que exista un mensaje de consola que contenga el texto esperado.
-- `openExtensionPage(context, extensionId, relativePath)` — abre una página interna de la extensión usando `chrome-extension://<id>/<path>`.
-- `openExtensionSidePanel(context, extensionId)` — solicita al background que abra el sidepanel como si se hubiese hecho clic en la acción de la extensión.
-- `closeServiceWorker(context, extensionId, options)` — fuerza el cierre/reinicio del service worker navegando a su contexto y cerrando la página.
-- `delay(ms)` — utilidad para esperar un número de milisegundos.
-- `closeContext(context)` — cierra el contexto de Playwright.
+- `launchExtensionContext(extensionPath, options)` — launches Chromium with the extension loaded and returns the context, an initial page, and the detected `extensionId`.
+- `findExtensionId(client)` — searches for a `chrome-extension://` target using CDP and returns the extension ID.
+- `openUrl(page, url, options)` — navigates to a URL with configurable timeouts.
+- `assertSelectorVisible(page, selector, options)` — waits for a selector to exist and be visible.
+- `assertSelectorExists(page, selector, options)` — waits for a selector to be present in the DOM, even if it is not visible.
+- `assertTextContains(page, selector, expected, options)` — verifies that a selector's text contains the expected string.
+- `assertTextEquals(page, selector, expected, options)` — verifies that a selector's text exactly matches the expected string.
+- `assertUrlContains(page, expected, options)` — verifies that the page's current URL contains the expected fragment.
+- `assertElementCount(page, selector, expectedCount, options)` — verifies the number of elements matching a selector.
+- `assertNoConsoleErrors(entries)` — verifies that no console entries have type `error`.
+- `clickText(page, text, options)` — clicks an element identified by its text.
+- `clickSelector(page, selector, options)` — clicks an element identified by a CSS selector.
+- `createConsoleLogger(page)` — collects console entries and page errors in an array.
+- `assertConsoleContains(entries, expectedText)` — verifies that a console message containing the expected text exists.
+- `openExtensionPage(context, extensionId, relativePath)` — opens an internal extension page using `chrome-extension://<id>/<path>`.
+- `openExtensionSidePanel(context, extensionId)` — asks the background to open the sidepanel as if the extension action had been clicked.
+- `closeServiceWorker(context, extensionId, options)` — forces the service worker to close and restart by navigating to its context and closing the page.
+- `delay(ms)` — utility for waiting a specified number of milliseconds.
+- `closeContext(context)` — closes the Playwright context.
 
-## Notas
+## Notes
 
-- Si el script no puede descubrir el `extensionId`, abre manualmente la extensión en Chromium y mira su id en `chrome://extensions`.
-- El test se ejecuta con `headless: false` por defecto, porque la UI del sidepanel y las extensiones suelen necesitar un navegador visible.
-- Si quieres ejecutar sin UI, cambia `headless: false` a `true` en `tests/playwright-extension-helpers.js`.
+- If the script cannot discover the `extensionId`, open the extension manually in Chromium and find its ID at `chrome://extensions`.
+- The test runs with `headless: false` by default because the sidepanel UI and extensions often require a visible browser.
+- To run without a UI, change `headless: false` to `true` in `tests/playwright-extension-helpers.js`.

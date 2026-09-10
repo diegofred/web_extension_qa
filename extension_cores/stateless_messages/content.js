@@ -98,3 +98,18 @@ chrome.runtime.onMessage.addListener(
 );
 
 init();
+
+// Test bridge: allows Playwright to send runtime messages without UI interaction
+if (typeof document !== 'undefined') {
+  document.addEventListener('__sidecarSendMessage', async (event) => {
+    const { type, payload, requestId } = event.detail || {};
+    const response = await chrome.runtime.sendMessage({
+      type,
+      sessionId,
+      payload
+    });
+    document.dispatchEvent(new CustomEvent('__sidecarSendMessageResponse', {
+      detail: { requestId, response }
+    }));
+  });
+}

@@ -1,290 +1,89 @@
 # AI Agent Guidance
 
-## Workspace overview
-This workspace contains two separate projects:
+## Repository Goal
 
-- `extension_cores/stateless_messages`
-  - Chrome extension using Manifest V3
-  - Contains `background.js`, `content.js`, `sidepanel.html`, `sidepanel.js`, and `manifest.json`
-  - Uses runtime messaging and a side panel with no build step
+This repository is a reusable Playwright integration-testing scaffold for browser extensions. Its primary goal is to test extension behavior through real browser interactions and human-readable assertions. Tests must remain independent of any specific extension core or framework so the helpers and workflow can be reused with any compatible extension.
 
-- `reducers-educativo`
-  - React + TypeScript + Vite application
-  - Main source under `reducers-educativo/src`
-  - Uses `package.json` scripts for development and build
+Use Playwright for extension tests. Treat the extension as a black box: drive the browser, interact with visible UI, observe navigation and messages, and validate user-visible outcomes. Do not replace browser flows with unit tests or direct imports from the extension under test.
 
-## Key commands
+## Related Guides
 
-For `reducers-educativo`:
+Use these documents together:
+
+- [README_PLAYWRIGHT.md](README_PLAYWRIGHT.md): repository overview, setup, helpers, and examples.
+- [TEST_WORKFLOW.md](TEST_WORKFLOW.md): step-by-step workflow for turning a user story into a test.
+- [TEST_CASE_TEMPLATE.md](TEST_CASE_TEMPLATE.md): format for documenting a test scenario before implementation.
+- [tests/playwright-extension-helpers.js](tests/playwright-extension-helpers.js): shared browser, action, and assertion helpers.
+- [tests/playwright-extension.spec.js](tests/playwright-extension.spec.js): generic example test and starting point for adapting a flow.
+
+When guidance overlaps, keep the behavior consistent with this file: use Playwright, reuse helpers, keep tests black-box, and avoid coupling tests to a bundled extension implementation.
+
+## Workspace Overview
+
+The workspace contains a reusable test harness and sample extension cores:
+
+- `tests/` contains the Playwright specs, shared helpers, and extension-specific examples.
+- `extension_cores/` contains local sample extensions used as fixtures and demonstrations. They are not required by the test architecture.
+
+## Setup And Commands
+
+Install Playwright and its browser once in this repository:
 
 - `npm install`
-- `npm run dev`
-- `npm run build`
-- `npm run preview`
+- `npx playwright install chromium`
 
-For `extension_cores/stateless_messages`:
+Run the generic example or a selected test with Node:
 
-- Load the folder as an unpacked extension in Chrome/Edge
-- Update `manifest.json` and the JS/HTML files directly
-- No project-level package scripts are present
+- `node tests/playwright-extension.spec.js`
+- `node tests/stateless_messages/playwright-extension-worker-resilience.spec.js`
+- `node tests/stateless_messages/playwright-extension-diagnostic.spec.js`
+- `node tests/stateless_messages/run-all-tests.js`
 
-## Important notes for AI agents
+To test another extension, pass its unpacked extension directory to the applicable test or adapt the fixture path in the test. Do not hardcode extension IDs.
 
-- Treat `extension_cores/stateless_messages` as a browser extension, not a bundled web app.
-- Treat `reducers-educativo` as a standard Vite React TypeScript project.
-- Keep fixes local to the relevant folder unless the task explicitly spans both projects.
-- Do not assume root-level dependencies or scripts outside `reducers-educativo`.
+## Test Creation
 
-## Useful files
+For each user story:
 
-- `extension_cores/stateless_messages/manifest.json`
-- `extension_cores/stateless_messages/background.js`
-- `extension_cores/stateless_messages/content.js`
-- `extension_cores/stateless_messages/sidepanel.html`
-- `reducers-educativo/package.json`
-- `reducers-educativo/src/App.tsx`
-- `reducers-educativo/src/main.tsx`
-- `reducers-educativo/vite.config.ts`
+1. Read [TEST_WORKFLOW.md](TEST_WORKFLOW.md) and capture the scenario with [TEST_CASE_TEMPLATE.md](TEST_CASE_TEMPLATE.md).
+2. Identify the pages, extension views, user actions, external effects, and user-visible assertions involved.
+3. Reuse existing local fixtures, mocks, and helpers before creating new assets.
+4. Implement the flow as Arrange, Act, and Assert steps in a Playwright test.
+5. Validate the expected UI, navigation, extension state, and console behavior.
 
+Tests must exercise the extension through the browser. Do not import extension modules, inspect private state, or substitute unit tests for a browser flow unless the user explicitly requests an implementation-level test.
 
-# Chrome Extension E2E Testing Agent Instructions
+## Fixtures And Mocks
 
-## Purpose
+- Never use external websites or production, staging, or third-party APIs.
+- Use local pages and Playwright route interception for deterministic tests.
+- Reuse an existing fixture before extending it; create a minimal new fixture only when needed.
+- Give fixtures stable `data-testid` attributes and realistic user-facing navigation.
+- Store new mocks beside the relevant test or in the repository's established mock directory. Do not assume a `playwright/mocks` directory exists.
 
-This repository contains an integration testing framework for a Chrome Extension using Playwright.
+## Selectors And Assertions
 
-The goal of the agent is to transform user stories and test scenarios into executable Playwright test suites.
+- Prefer stable `data-testid` selectors over layout selectors such as `div:nth-child(3)`.
+- Prefer the shared helpers in [tests/playwright-extension-helpers.js](tests/playwright-extension-helpers.js) over custom wrappers.
+- Prefer `assertTextContains()` over manually reading `locator.textContent()`.
+- Prefer `assertSelectorVisible()` over raw `page.waitForSelector()` when visibility is the behavior being tested.
+- Prefer `assertUrlContains()` over custom URL checks.
+- Avoid arbitrary sleeps; use `delay()` only when no meaningful browser assertion can express the wait.
+- Include a no-console-errors assertion when the flow captures console entries.
 
-The main rule is: write integration tests with human-facing assertions and browser-driven flows. Avoid unit-test frameworks such as vitest for this extension testing scaffold.
+## Test Naming
 
-The generated tests must use existing helper functions whenever possible.
+Use the format `[Feature] - [Expected Behavior]`, for example:
 
-The agent should prioritize readability, maintainability, and reuse.
+- `Dashboard - Synchronizes when the extension opens a page`
+- `Prospect Matching - Opens a matched prospect`
+- `Authentication - User login succeeds`
 
----
-
-# Architecture
-
-Tests are organized around:
-
-* Extension behavior
-* PMS simulation
-* Backend API mocking
-* Sidepanel interactions
-* Scraping workflows
-* Authentication workflows
-
-The extension is always tested as a black box.
-
-The implementation details of the extension should not be accessed directly unless explicitly required.
-
----
-
-# Primary Workflow
-
-When a new test request is received:
-
-0. Remember the main rule: this is integration testing with human assertions, not vitest-style unit testing.
-1. Read the user story.
-2. Identify:
-
-   * PMS pages involved
-   * Backend APIs involved
-   * Extension views involved
-   * Scraping requirements
-   * Assertions required
-3. Check if fixtures already exist.
-4. Check if API mocks already exist.
-5. Check if PMS pages already exist.
-6. Reuse helpers whenever possible.
-7. Create only missing assets.
-8. Generate or update Playwright tests.
-
----
-
-# Required Test Structure
-
-Every test should follow:
-
-Arrange
-→ Mock APIs
-→ Open PMS page
-→ Open extension
-→ Perform user actions
-
-Act
-→ Navigate
-→ Click
-→ Trigger scraping
-→ Trigger extension actions
-
-Assert
-→ Validate UI
-→ Validate navigation
-→ Validate API results
-→ Validate sidepanel state
-
----
-
-# Existing Helper Functions
-
-Always prefer these helpers over custom implementations.
-
-## Browser
-
-launchExtensionContext(...)
-findExtensionId(...)
-closeContext(...)
-
-## Navigation
-
-openUrl(...)
-
-## Extension
-
-openExtensionPage(...)
-openExtensionSidePanel(...)
-
-## User Actions
-
-clickSelector(...)
-clickText(...)
-
-## Assertions
-
-assertSelectorVisible(...)
-assertSelectorExists(...)
-assertTextContains(...)
-assertTextEquals(...)
-assertUrlContains(...)
-assertElementCount(...)
-
-## Console Validation
-
-createConsoleLogger(...)
-assertConsoleContains(...)
-assertNoConsoleErrors(...)
-
-## Utilities
-
-delay(...)
-closeServiceWorker(...)
-
----
-
-# Preferred Assertions
-
-Prefer:
-
-assertTextContains()
-
-instead of manual locator.textContent()
-
-Prefer:
-
-assertSelectorVisible()
-
-instead of page.waitForSelector()
-
-Prefer:
-
-assertUrlContains()
-
-instead of custom URL checks.
-
----
-
-# PMS Simulation Rules
-
-Never use external websites.
-
-Always use local PMS fixtures.
-
-Supported PMS fixtures:
-
-* Generic PMS
-* AppFolio
-* Yardi
-* RentManager
-
-If a fixture does not exist:
-
-Create a minimal version.
-
-The fixture must include:
-
-* Stable selectors
-* Test IDs
-* Realistic navigation
-
----
-
-# Mocking Rules
-
-All APIs must be mocked.
-
-No test should depend on:
-
-* Production APIs
-* Staging APIs
-* Third-party APIs
-
-Use Playwright route interception.
-
-Mock responses must live under:
-
-playwright/mocks
-
----
-
-# Selector Rules
-
-Prefer:
-
-data-testid
-
-Example:
-
-[data-testid="prospect-email"]
-
-Avoid:
-
-div:nth-child(3)
-
-Avoid:
-
-CSS selectors based on visual layout.
-
----
-
-# Test Naming Convention
-
-Format:
-
-[Feature] - [Expected Behavior]
-
-Examples:
-
-Dashboard - Synchronizes when PMS dashboard opens
-
-Prospect Matching - Opens matched prospect
-
-Authentication - User login succeeds
-
----
-
-# Forbidden Patterns
+## Forbidden Patterns
 
 Do not:
 
-* Duplicate helper logic
-* Duplicate mocks
-* Hardcode extension IDs
-* Depend on network access
-* Use arbitrary sleep() calls
-
-Always prefer:
-
-delay()
-
-Only when a proper assertion is not possible.
+- Duplicate helper or mock logic.
+- Hardcode extension IDs.
+- Depend on network access.
+- Use arbitrary sleep calls when a browser assertion can express the wait.
