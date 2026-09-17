@@ -1,5 +1,21 @@
 {
+  "name": "web-extension-qa",
+  "version": "1.0.0",
+  "description": "Human-centered Playwright framework for Chrome extensions",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node tests/stateless_messages/run-all-tests.js",
+    "test:generic": "node tests/playwright-extension.spec.js",
+    "test:worker": "node tests/stateless_messages/playwright-extension-worker-resilience.spec.js",
+    "test:diagnostic": "node tests/stateless_messages/playwright-extension-diagnostic.spec.js"
+  },
   "devDependencies": {
-    "playwright": "^1.60.0"
+    "@playwright/test": "^1.63.0",
+    "@types/chrome": "^0.3.0",
+    "@types/node": "^26.6.1",
+    "playwright": "^1.63.0",
+    "typescript": "^7.0.2"
   }
 }
