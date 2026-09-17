@@ -20,6 +20,7 @@ context: |
   - Tests: Test suites live under `tests/` and consume local unpacked extension builds (e.g., `extension_cores/`).
   - Extensibility: Custom Playwright fixtures (`test.extend`) automatically supply `extensionContext`, `extensionId`, and `sidepanelPage`.
   - Maintain backwards compatibility for all exported helper signatures.
+  - Helper documentation: use [README_PLAYWRIGHT.md#available-helper-reference](../README_PLAYWRIGHT.md#available-helper-reference) as the user-facing reference for every available helper and fixture.
 
   Task conventions:
   - Group tasks under `## N. Group Name` headings.

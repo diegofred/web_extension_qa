@@ -123,26 +123,96 @@ You can reuse `tests/playwright-extension-helpers.js` in other projects because 
 
 ## Available Helper Reference
 
-- `launchExtensionContext({ extensionPath, userDataDir, headless, viewport })` — launches Chromium with the extension loaded and returns the context, an initial page, the resolved extension path, and the detected `extensionId`. The options-object form is canonical; the previous path-first form is no longer supported.
-- `findExtensionId(client)` — searches for a `chrome-extension://` target using CDP and returns the extension ID.
-- `openUrl(page, url, options)` — navigates to a URL with configurable timeouts.
-- `assertSelectorVisible(page, selector, options)` — waits for a selector to exist and be visible.
-- `assertSelectorExists(page, selector, options)` — waits for a selector to be present in the DOM, even if it is not visible.
-- `assertTextContains(page, selector, expected, options)` — verifies that a selector's text contains the expected string.
-- `assertTextEquals(page, selector, expected, options)` — verifies that a selector's text exactly matches the expected string.
-- `assertUrlContains(page, expected, options)` — verifies that the page's current URL contains the expected fragment.
-- `assertElementCount(page, selector, expectedCount, options)` — verifies the number of elements matching a selector.
-- `assertNoConsoleErrors(entries)` — verifies that no console entries have type `error`.
-- `clickText(page, text, options)` — clicks an element identified by its text.
-- `clickSelector(page, selector, options)` — clicks an element identified by a CSS selector.
-- `createConsoleLogger(page)` — collects console entries and page errors in an array.
-- `assertConsoleContains(entries, expectedText)` — verifies that a console message containing the expected text exists.
-- `openExtensionPage(context, extensionId, relativePath)` — opens an internal extension page using `chrome-extension://<id>/<path>`.
-- `openExtensionSidePanel(context, extensionId)` — opens `sidepanel.html` directly and waits for it to initialize; it does not require an extension-specific background message.
-- `closeServiceWorker(context, extensionId, options)` — closes the matching Manifest V3 service-worker target through CDP and waits for restart.
-- `delay(ms)` — utility for waiting a specified number of milliseconds.
-- `closeContext(context)` — closes the Playwright context.
-- `waitForDelivery(page, expressionOrPredicate, options)` — polls a string expression or serializable callback until it becomes truthy.
+This section is the user-facing reference for the helpers in this repository. The TypeScript API is exported from `src/index.ts` and is the recommended API for new tests. The standalone JavaScript helpers in `tests/playwright-extension-helpers.js` are also documented below because existing test scripts use them.
+
+### TypeScript library API
+
+Import the library from the package entry point after running `npm run build`:
+
+```ts
+import {
+  assertNoConsoleErrors,
+  assertSelectorVisible,
+  closeContext,
+  launchExtensionContext,
+  openExtensionSidePanel,
+} from './dist/index.js';
+```
+
+#### Browser lifecycle and extension pages
+
+- `launchExtensionContext({ extensionPath, userDataDir?, headless?, viewport? })` — resolves and validates the unpacked extension directory, launches a persistent Chromium context with that extension loaded, creates an initial page, and discovers the extension ID through CDP. It returns `{ context, page, extensionId, extensionPath }`. The options-object form is canonical.
+- `findExtensionId(client)` — asks the supplied Playwright CDP session for active targets and returns the first ID found in a `chrome-extension://` target, or `null` when no extension target exists.
+- `openExtensionPage(context, extensionId, relativePath)` — creates a new page, navigates it to `chrome-extension://<extensionId>/<relativePath>`, waits for the page to load, and returns the page. Use this for extension pages other than the side panel.
+- `openExtensionSidePanel(context, extensionId)` — opens `sidepanel.html` with `openExtensionPage`, waits for `domcontentloaded`, and returns the initialized page.
+- `closeServiceWorker(context, extensionId, { delayAfterClose? })` — finds the extension's Manifest V3 service-worker target through CDP, closes it, and waits briefly for Chrome to restart it. Use this to verify state and messaging survive worker restarts.
+- `closeContext(context)` — closes the persistent Playwright browser context and releases its pages and resources. Call it in cleanup when you are not using the bundled `test` fixture.
+
+Example lifecycle flow:
+
+```ts
+const session = await launchExtensionContext({ extensionPath: './extension_cores/my-extension' });
+const sidepanel = await openExtensionSidePanel(session.context, session.extensionId);
+await assertSelectorVisible(sidepanel, '[data-testid="app"]');
+await closeContext(session.context);
+```
+
+#### Browser and DOM assertions
+
+All assertion helpers accept an optional `{ timeout }` in milliseconds. They use Playwright's `expect` and wait for the requested condition instead of reading the DOM once.
+
+- `assertSelectorVisible(page, selector, options?)` — waits until the selector matches a visible element.
+- `assertSelectorExists(page, selector, options?)` — waits until the selector is attached to the DOM, whether visible or hidden.
+- `assertTextContains(page, selector, expected, options?)` — waits until the selected element's text contains `expected`.
+- `assertTextEquals(page, selector, expected, options?)` — waits until the selected element's text exactly equals `expected`.
+- `assertUrlContains(page, expected, options?)` — waits until the page URL matches the supplied regular expression.
+- `assertElementCount(page, selector, expectedCount, options?)` — waits until exactly `expectedCount` elements match the selector.
+
+Prefer stable `data-testid` selectors and these assertions over arbitrary sleeps or direct `textContent()` checks.
+
+#### Console and page-error helpers
+
+- `createConsoleLogger(page)` — attaches listeners for browser console messages and uncaught page errors, returning a live array of `{ type, text, timestamp }` entries. Create the logger before the interaction you want to observe.
+- `assertNoConsoleErrors(entries)` — throws when any captured entry has type `error`; use it at the end of a flow that must be clean.
+- `assertConsoleContains(entries, expectedText)` — throws unless at least one captured entry contains the expected text.
+
+```ts
+const entries = createConsoleLogger(sidepanel);
+// ...perform browser interactions...
+assertNoConsoleErrors(entries);
+```
+
+#### Runtime messaging and delivery
+
+- `sendMessageFromContent(page, type, payload?, options?)` — dispatches the library's content-script bridge event inside the page, waits for the matching response, and returns the response. The optional timeout defaults to 5 seconds and the generic parameters can type the payload and response.
+- `waitForDelivery(page, expressionOrPredicate, options?)` — repeatedly evaluates a string expression or serializable predicate in the page until it returns a truthy value. It checks every 100ms and throws after the optional timeout (5 seconds by default).
+
+### Standalone JavaScript helpers
+
+`tests/playwright-extension-helpers.js` contains the original CommonJS helper set used by the Node-based example tests. It provides the same lifecycle, assertion, console, messaging, and delivery helpers described above, plus these convenience helpers:
+
+- `openUrl(page, url, options?)` — navigates to a URL, first waiting for `domcontentloaded` by default and retrying with `load` if the first navigation fails.
+- `waitForText(page, selectorOrText, options?)` — waits for a selector, including Playwright's `text=` selector form.
+- `clickText(page, text, options?)` — clicks the first element matching `text=<text>`.
+- `clickSelector(page, selector, options?)` — clicks the supplied CSS selector.
+- `delay(ms)` — resolves after the requested number of milliseconds. Use only when no meaningful browser condition can express the wait.
+
+The JavaScript helper names are intentionally kept for backwards compatibility. New TypeScript tests should prefer the typed library API and the bundled `test` fixture.
+
+### Playwright fixture
+
+- `test` — a Playwright `test.extend` fixture that provides `extensionPath` (default `./dist`), `extensionLaunchOptions`, `extensionContext`, `extensionId`, and `sidepanelPage`. The fixture launches and closes the browser context automatically.
+- `expect` — re-exported from `@playwright/test` so fixture-based tests can import both `test` and `expect` from the library.
+
+Example fixture usage:
+
+```ts
+import { expect, test } from 'web-extension-qa';
+
+test('Side panel - renders the application', async ({ sidepanelPage }) => {
+  await expect(sidepanelPage.locator('[data-testid="app"]')).toBeVisible();
+});
+```
 
 ## TypeScript library migration
 
