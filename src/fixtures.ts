@@ -4,6 +4,7 @@ import { LaunchExtensionOptions } from './types';
 
 export interface ExtensionFixtures {
   extensionPath: string;
+  extensionLaunchOptions: Partial<LaunchExtensionOptions>;
   extensionContext: BrowserContext;
   extensionId: string;
   sidepanelPage: Page;
@@ -11,38 +12,40 @@ export interface ExtensionFixtures {
 
 export const test = base.extend<ExtensionFixtures>({
   // Default directory for unpacked extension output; users can override this in their tests or config
-  extensionPath: [async ({}, use) => {
-    await use('./dist');
-  }, { option: true }],
+  extensionPath: ['./dist', { option: true }],
+
+  extensionLaunchOptions: [{}, { option: true }],
 
   // Launches persistent browser context with extension loaded
-  extensionContext: async ({ extensionPath }, use) => {
-    const session = await launchExtensionContext(extensionPath);
+  extensionContext: async ({ extensionPath, extensionLaunchOptions }, use) => {
+    const session = await launchExtensionContext({
+      ...extensionLaunchOptions,
+      extensionPath: extensionLaunchOptions.extensionPath ?? extensionPath,
+    });
     await use(session.context);
     await closeContext(session.context);
   },
 
-  // Automatically extracts extension ID from the active context
   extensionId: async ({ extensionContext }, use) => {
     const page = extensionContext.pages()[0] || await extensionContext.newPage();
     const client = await extensionContext.newCDPSession(page);
     const res = await client.send('Target.getTargets');
-    const targets = res.targetInfos || [];
-    const ext = targets.find(t => t.url && t.url.startsWith('chrome-extension://'));
-    
-    if (!ext) {
+    const target = (res.targetInfos || []).find((info) => info.url?.startsWith('chrome-extension://'));
+
+    if (!target) {
       throw new Error('Extension ID not found in active targets');
     }
-    
-    const extensionId = ext.url.split('/')[2];
-    await use(extensionId);
+
+    await use(target.url.split('/')[2]);
   },
 
-  // Provides an initialized sidepanel page ready for testing
   sidepanelPage: async ({ extensionContext, extensionId }, use) => {
     const page = await openExtensionSidePanel(extensionContext, extensionId);
-    await use(page);
-    await page.close();
+    try {
+      await use(page);
+    } finally {
+      await page.close();
+    }
   },
 });
 

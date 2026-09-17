@@ -23,7 +23,7 @@ async function getDebugState(extensionPage) {
 
 (async () => {
   const extensionPath = path.resolve(__dirname, '../../extension_cores/sidepanel_lib_validation');
-  const { context, extensionId } = await launchExtensionContext(extensionPath, { headless: false });
+  const { context, extensionId } = await launchExtensionContext({ extensionPath, headless: false });
 
   if (!extensionId) {
     throw new Error('Could not discover extension id.');

@@ -92,7 +92,7 @@ npx playwright install chromium
 
 All tests use a shared helper library at `../playwright-extension-helpers.js` with generic utilities:
 
-- `launchExtensionContext(extensionPath)` — starts Chromium with extension loaded
+- `launchExtensionContext({ extensionPath, ...options })` — starts Chromium with the extension loaded
 - `openUrl(page, url)` — navigates to a website
 - `clickText(page, text)` — clicks an element by text
 - `openExtensionPage(context, extensionId, path)` — opens extension pages
@@ -107,14 +107,14 @@ See `../playwright-extension-helpers.js` for full API.
 To add new test cases for `stateless_messages`:
 
 1. Import helpers: `const { launchExtensionContext, ... } = require('../playwright-extension-helpers');`
-2. Launch context: `const { context, extensionId } = await launchExtensionContext('../extension_cores/stateless_messages');`
+2. Launch context: `const { context, extensionId } = await launchExtensionContext({ extensionPath: '../extension_cores/stateless_messages' });`
 3. Use helpers for navigation, assertions, and actions
 4. Always close context: `await closeContext(context);`
 
 Example:
 
 ```javascript
-const { context, extensionId } = await launchExtensionContext('../extension_cores/stateless_messages');
+const { context, extensionId } = await launchExtensionContext({ extensionPath: '../extension_cores/stateless_messages' });
 const testPage = await context.newPage();
 await openUrl(testPage, 'https://example.com');
 await assertSelectorVisible(testPage, 'text=Send To Panel');

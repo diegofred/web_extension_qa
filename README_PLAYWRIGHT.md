@@ -56,6 +56,14 @@ npx playwright install chromium
 node tests/playwright-extension.spec.js
 ```
 
+To validate the compiled TypeScript library and its Playwright fixtures:
+
+```bash
+npm run build
+npm run test:library
+npx playwright test tests/library_api_validation/playwright-fixtures.spec.js --workers=1
+```
+
 3. To test another extension, pass its directory as an argument:
 
 ```bash
@@ -115,7 +123,7 @@ You can reuse `tests/playwright-extension-helpers.js` in other projects because 
 
 ## Available Helper Reference
 
-- `launchExtensionContext(extensionPath, options)` — launches Chromium with the extension loaded and returns the context, an initial page, and the detected `extensionId`.
+- `launchExtensionContext({ extensionPath, userDataDir, headless, viewport })` — launches Chromium with the extension loaded and returns the context, an initial page, the resolved extension path, and the detected `extensionId`. The options-object form is canonical; the previous path-first form is no longer supported.
 - `findExtensionId(client)` — searches for a `chrome-extension://` target using CDP and returns the extension ID.
 - `openUrl(page, url, options)` — navigates to a URL with configurable timeouts.
 - `assertSelectorVisible(page, selector, options)` — waits for a selector to exist and be visible.
@@ -130,10 +138,25 @@ You can reuse `tests/playwright-extension-helpers.js` in other projects because 
 - `createConsoleLogger(page)` — collects console entries and page errors in an array.
 - `assertConsoleContains(entries, expectedText)` — verifies that a console message containing the expected text exists.
 - `openExtensionPage(context, extensionId, relativePath)` — opens an internal extension page using `chrome-extension://<id>/<path>`.
-- `openExtensionSidePanel(context, extensionId)` — asks the background to open the sidepanel as if the extension action had been clicked.
-- `closeServiceWorker(context, extensionId, options)` — forces the service worker to close and restart by navigating to its context and closing the page.
+- `openExtensionSidePanel(context, extensionId)` — opens `sidepanel.html` directly and waits for it to initialize; it does not require an extension-specific background message.
+- `closeServiceWorker(context, extensionId, options)` — closes the matching Manifest V3 service-worker target through CDP and waits for restart.
 - `delay(ms)` — utility for waiting a specified number of milliseconds.
 - `closeContext(context)` — closes the Playwright context.
+- `waitForDelivery(page, expressionOrPredicate, options)` — polls a string expression or serializable callback until it becomes truthy.
+
+## TypeScript library migration
+
+The public TypeScript API now uses an options object:
+
+```ts
+const session = await launchExtensionContext({
+  extensionPath: './dist',
+  headless: false,
+  viewport: { width: 1280, height: 800 },
+});
+```
+
+Replace the former `launchExtensionContext(extensionPath, options)` call with the equivalent object form. Extension-specific runtime messages such as `OPEN_SIDE_PANEL` belong in consumer tests rather than generic library lifecycle helpers.
 
 ## Notes
 

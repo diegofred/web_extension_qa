@@ -131,7 +131,7 @@ async function clickInjectedToggleButton(page) {
   let context;
 
   try {
-    const launch = await launchExtensionContext(extensionPath, { headless: false });
+    const launch = await launchExtensionContext({ extensionPath, headless: false });
     context = launch.context;
 
     const extensionId = launch.extensionId;

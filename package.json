@@ -9,7 +9,9 @@
     "test": "node tests/stateless_messages/run-all-tests.js",
     "test:generic": "node tests/playwright-extension.spec.js",
     "test:worker": "node tests/stateless_messages/playwright-extension-worker-resilience.spec.js",
-    "test:diagnostic": "node tests/stateless_messages/playwright-extension-diagnostic.spec.js"
+    "test:diagnostic": "node tests/stateless_messages/playwright-extension-diagnostic.spec.js",
+    "test:library": "node tests/library_api_validation/playwright-library-api.spec.js",
+    "test:fixture-cleanup": "node tests/library_api_validation/run-fixture-cleanup-validation.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

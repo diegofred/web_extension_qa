@@ -15,7 +15,7 @@ const {
 (async () => {
   const extensionPath = process.argv[2] || path.resolve(__dirname, '../../extension_cores/launcher_sidepanel_demo');
 
-  const { context, extensionId } = await launchExtensionContext(extensionPath, { headless: false });
+  const { context, extensionId } = await launchExtensionContext({ extensionPath, headless: false });
 
   if (!extensionId) {
     throw new Error('Extension id could not be discovered.');

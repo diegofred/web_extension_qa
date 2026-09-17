@@ -1,34 +1,44 @@
 schema: spec-driven
-githubCopilot:
-  cloudAgent: true
+context: |
+  Domain: Playwright Chrome Extension Testing Framework — a TypeScript framework and helper library 
+  designed for human-centered integration testing of Manifest V3 web extensions (Side Panels, Content Scripts, Service Workers, React UI).
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+  Tech stack:
+  - Language: TypeScript (ES2022 / NodeNext)
+  - Core Libraries: Playwright, Chromium DevTools Protocol (CDP)
+  - Framework Target: Chrome Extensions (Manifest V3), ReactJS Side Panels
+  - Output: NPM Exportable Module (`dist/`) + Local Integration Test Fixtures
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Testing discipline (non-negotiable):
+  - Black-box integration tests using Playwright persistent browser contexts.
+  - Rely exclusively on human-centered browser interactions and visual/DOM assertions.
+  - Do NOT import extension internal source code directly or use Vitest/unit tests for extension behavior.
+  - Every test must verify: clean UI rendering, service worker resilience, and absence of console errors.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Project conventions:
+  - Source: Exportable TypeScript core lives in `src/` (`types.ts`, `lifecycle.ts`, `assertions.ts`, `messaging.ts`, `fixtures.ts`).
+  - Tests: Test suites live under `tests/` and consume local unpacked extension builds (e.g., `extension_cores/`).
+  - Extensibility: Custom Playwright fixtures (`test.extend`) automatically supply `extensionContext`, `extensionId`, and `sidepanelPage`.
+  - Maintain backwards compatibility for all exported helper signatures.
+
+  Task conventions:
+  - Group tasks under `## N. Group Name` headings.
+  - Every task must be a checkbox in the form `- [ ] N.M Task description`.
+  - Each task must be small, focused, reference the relevant spec scenario, and follow: test creation → implementation → validation.
+  - Check off tasks as you complete them one-by-one or section by section.
+
+rules:
+  proposal:
+    - Include rollback plan for breaking API changes
+    - Verify compatibility across Chrome Extension Manifest V3 contexts (Content Script, Background Worker, Sidepanel)
+    - Ensure all public helper functions are fully typed in TypeScript
+  specs:
+    - Use Given/When/Then or Arrange/Act/Assert format for human user stories
+    - Reference existing helper functions in `src/` before creating new ones
+
+operations:
+  apply:
+    guidance:
+      - Run specific test files (`npx playwright test tests/path/to/spec.ts`) before running full suite
+      - Always test service worker lifecycle changes against service worker restart scenarios
+      - Prefer small, focused diffs; keep each helper or utility change under ~30 lines when possible

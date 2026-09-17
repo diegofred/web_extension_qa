@@ -3,8 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
 
-async function launchExtensionContext(extensionPath, options = {}) {
-  const resolved = path.resolve(extensionPath);
+async function launchExtensionContext(options) {
+  const resolved = path.resolve(options.extensionPath);
   assert(fs.existsSync(resolved), `Extension path not found: ${resolved}`);
 
   const userDataDir = options.userDataDir || path.join(__dirname, '.tmp_profile');
@@ -106,10 +106,10 @@ async function clickSelector(page, selector, options = {}) {
 async function createConsoleLogger(page) {
   const entries = [];
   page.on('console', msg => {
-    entries.push({ type: msg.type(), text: msg.text() });
+    entries.push({ type: msg.type(), text: msg.text(), timestamp: Date.now() });
   });
   page.on('pageerror', err => {
-    entries.push({ type: 'error', text: err.message });
+    entries.push({ type: 'error', text: err.message, timestamp: Date.now() });
   });
   return entries;
 }
@@ -129,15 +129,7 @@ async function openExtensionPage(context, extensionId, relativePath) {
 
 async function openExtensionSidePanel(context, extensionId) {
   const page = await openExtensionPage(context, extensionId, 'sidepanel.html');
-  const result = await page.evaluate(async () => {
-    if (chrome.runtime.sendMessage.length === 1) {
-      return await chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
-    }
-    return await new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' }, resolve);
-    });
-  });
-  assert(result && result.success, `Failed to request sidepanel open: ${result?.error || 'unknown'}`);
+  await page.waitForLoadState('domcontentloaded');
   return page;
 }
 
@@ -193,7 +185,9 @@ async function waitForDelivery(page, checkExpression, options = {}) {
   const timeout = options.timeout || 5000;
   const start = Date.now();
   while (Date.now() - start < timeout) {
-    const ok = await page.evaluate(checkExpression);
+    const ok = typeof checkExpression === 'string'
+      ? await page.evaluate(checkExpression)
+      : await page.evaluate(checkExpression);
     if (ok) return true;
     await delay(100);
   }

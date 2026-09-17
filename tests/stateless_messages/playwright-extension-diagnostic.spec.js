@@ -11,7 +11,7 @@ const {
 
 (async () => {
   const extensionPath = process.argv[2] || path.resolve(__dirname, '../../extension_cores/stateless_messages');
-  const { context, page, extensionId } = await launchExtensionContext(extensionPath, { headless: false });
+  const { context, page, extensionId } = await launchExtensionContext({ extensionPath, headless: false });
 
   console.log('\n=== Diagnostic Test: Message Flow and Storage ===');
 

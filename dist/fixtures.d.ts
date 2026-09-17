@@ -1,6 +1,8 @@
 import { Page, BrowserContext } from '@playwright/test';
+import { LaunchExtensionOptions } from './types';
 export interface ExtensionFixtures {
     extensionPath: string;
+    extensionLaunchOptions: Partial<LaunchExtensionOptions>;
     extensionContext: BrowserContext;
     extensionId: string;
     sidepanelPage: Page;

@@ -42,8 +42,8 @@ exports.closeContext = closeContext;
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const test_1 = require("@playwright/test");
-async function launchExtensionContext(extensionPath, options = {}) {
-    const resolved = path.resolve(extensionPath);
+async function launchExtensionContext(options) {
+    const resolved = path.resolve(options.extensionPath);
     if (!fs.existsSync(resolved)) {
         throw new Error(`Extension path not found: ${resolved}`);
     }
@@ -51,7 +51,7 @@ async function launchExtensionContext(extensionPath, options = {}) {
     const browserArgs = [
         `--disable-extensions-except=${resolved}`,
         `--load-extension=${resolved}`,
-        '--no-sandbox'
+        '--no-sandbox',
     ];
     const context = await test_1.chromium.launchPersistentContext(userDataDir, {
         headless: options.headless ?? false,
@@ -62,6 +62,7 @@ async function launchExtensionContext(extensionPath, options = {}) {
     const client = await context.newCDPSession(page);
     const extensionId = await findExtensionId(client);
     if (!extensionId) {
+        await context.close();
         throw new Error('Failed to discover Extension ID using CDP.');
     }
     return { context, page, extensionId, extensionPath: resolved };
@@ -69,11 +70,10 @@ async function launchExtensionContext(extensionPath, options = {}) {
 async function findExtensionId(client) {
     const res = await client.send('Target.getTargets');
     const targets = res.targetInfos || [];
-    const ext = targets.find(t => t.url && t.url.startsWith('chrome-extension://'));
+    const ext = targets.find((target) => target.url?.startsWith('chrome-extension://'));
     if (!ext)
         return null;
-    const parts = ext.url.split('/');
-    return parts[2] || null;
+    return ext.url.split('/')[2] || null;
 }
 async function openExtensionPage(context, extensionId, relativePath) {
     const url = `chrome-extension://${extensionId}/${relativePath}`;
@@ -83,29 +83,20 @@ async function openExtensionPage(context, extensionId, relativePath) {
 }
 async function openExtensionSidePanel(context, extensionId) {
     const page = await openExtensionPage(context, extensionId, 'sidepanel.html');
-    const result = await page.evaluate(async () => {
-        return await new Promise((resolve) => {
-            chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' }, (res) => {
-                resolve(res || { success: true });
-            });
-        });
-    });
-    if (!result || !result.success) {
-        throw new Error(`Failed to request sidepanel open: ${result?.error || 'unknown'}`);
-    }
+    await page.waitForLoadState('domcontentloaded');
     return page;
 }
 async function closeServiceWorker(context, extensionId, options = {}) {
-    const delayMs = options.delayAfterClose || 500;
-    const page = await context.newPage();
-    try {
-        await page.goto(`chrome-extension://${extensionId}/background.html`, { waitUntil: 'load', timeout: 5000 }).catch(() => { });
+    const page = context.pages()[0] || await context.newPage();
+    const client = await context.newCDPSession(page);
+    const { targetInfos } = await client.send('Target.getTargets');
+    const worker = (targetInfos || []).find((target) => target.type === 'service_worker' && target.url?.startsWith(`chrome-extension://${extensionId}/`));
+    // Service worker may not have a background.html page; close its CDP target directly.
+    if (worker) {
+        await client.send('Target.closeTarget', { targetId: worker.targetId });
     }
-    catch {
-        // Service worker may not have background.html context
-    }
-    await page.close();
-    await new Promise(resolve => setTimeout(resolve, delayMs));
+    const delayMs = options.delayAfterClose ?? 500;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 async function closeContext(context) {
     await context.close();

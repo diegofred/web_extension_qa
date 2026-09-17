@@ -25,6 +25,7 @@ export interface AssertionOptions {
 export interface ServiceWorkerCloseOptions {
     delayAfterClose?: number;
 }
+export type DeliveryCheck = string | (() => boolean);
 export interface ExtensionMessage<T = unknown> {
     type: string;
     payload?: T;
