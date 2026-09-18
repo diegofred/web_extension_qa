@@ -39,7 +39,18 @@ const {
   await clickText(testPage, 'Send To Panel');
   await delay(500);
 
-  const sidePanelPage = await openExtensionPage(context, extensionId, 'sidepanel.html');
+  const tabInspector = await openExtensionPage(context, extensionId, 'sidepanel.html');
+  const targetTab = await tabInspector.evaluate(async () => {
+    const tabs = await chrome.tabs.query({});
+    return tabs.find((tab) => tab.url === 'https://example.com/' || tab.url === 'https://example.com');
+  });
+  await tabInspector.close();
+
+  if (!targetTab?.id) {
+    throw new Error('Could not identify the content tab for diagnostic queue inspection');
+  }
+
+  const sidePanelPage = await openExtensionPage(context, extensionId, `sidepanel.html?tabId=${targetTab.id}`);
   await delay(500);
 
   // From sidepanel, inspect the full storage.session state
@@ -64,19 +75,14 @@ const {
     });
   }
 
-  // Get the current tab to see what sessionId we should be looking for
-  const tabInfo = await sidePanelPage.evaluate(async () => {
-    return new Promise((resolve) => {
-      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-        resolve({ tabId: tab?.id, url: tab?.url });
-      });
-    });
-  });
-
-  console.log('\nCurrent active tab info:', tabInfo);
-  const expectedQueueKey = `queue:tab:${tabInfo.tabId}`;
+  const expectedQueueKey = `queue:tab:${targetTab.id}`;
+  console.log('\nContent tab used for diagnostic:', { tabId: targetTab.id, url: targetTab.url });
   console.log(`Expected queue key: ${expectedQueueKey}`);
   console.log(`Queue data for this key:`, storageSnapshot[expectedQueueKey] || 'NOT FOUND');
+
+  if (!storageSnapshot[expectedQueueKey]) {
+    throw new Error(`Expected queue data for ${expectedQueueKey}`);
+  }
 
   console.log('\n--- Test 2: Check Sidepanel Message Container ---');
   const msgCardCount = (await sidePanelPage.$$('#messages .msg')).length;
@@ -84,12 +90,15 @@ const {
   console.log(`Message container HTML length: ${msgContainerText?.length || 0}`);
   console.log(`Message cards found: ${msgCardCount}`);
 
-  console.log('\n--- Summary ---');
   if (queueKeys.length === 0) {
-    console.log('⚠️  No queue keys found in storage.session. Messages may not be stored.');
-  } else {
-    console.log('✓ Queue keys found in storage. Check values above.');
+    throw new Error('Expected at least one queue key in storage.session');
   }
+  if (msgCardCount < 1) {
+    throw new Error(`Expected the sidepanel to display at least one message, but got ${msgCardCount}`);
+  }
+
+  console.log('\n--- Summary ---');
+  console.log('✓ Queue keys found and displayed for the originating content tab.');
 
   await closeContext(context);
 })();

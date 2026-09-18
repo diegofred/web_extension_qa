@@ -14,6 +14,24 @@ const {
   closeContext,
 } = require('../playwright-extension-helpers');
 
+async function findTabId(context, extensionId, expectedUrl) {
+  const inspector = await openExtensionPage(context, extensionId, 'sidepanel.html');
+  try {
+    const tab = await inspector.evaluate(async (url) => {
+      const tabs = await chrome.tabs.query({});
+      return tabs.find((candidate) => candidate.url === url || candidate.url.startsWith(`${url}/`));
+    }, expectedUrl);
+
+    if (!tab?.id) {
+      throw new Error(`Could not find target tab for ${expectedUrl}`);
+    }
+
+    return tab.id;
+  } finally {
+    await inspector.close();
+  }
+}
+
 (async () => {
   const extensionPath = process.argv[2] || path.resolve(__dirname, '../../extension_cores/stateless_messages');
   const { context, page, extensionId } = await launchExtensionContext({ extensionPath, headless: false });
@@ -26,7 +44,8 @@ const {
   console.log('✓ Sent message 1 from content script.');
   await delay(500);
 
-  let sidePanelPage = await openExtensionPage(context, extensionId, 'sidepanel.html');
+  const targetTabId = await findTabId(context, extensionId, 'https://example.com');
+  let sidePanelPage = await openExtensionPage(context, extensionId, `sidepanel.html?tabId=${targetTabId}`);
   await delay(500);
   let msgCount = (await sidePanelPage.$$('#messages .msg')).length;
   console.log(`✓ Sidepanel shows ${msgCount} message(s) after initial send.`);
@@ -58,7 +77,7 @@ const {
     // already closed, fine
   }
   
-  sidePanelPage = await openExtensionPage(context, extensionId, 'sidepanel.html');
+  sidePanelPage = await openExtensionPage(context, extensionId, `sidepanel.html?tabId=${targetTabId}`);
   await delay(1000);
   
   try {
@@ -72,11 +91,10 @@ const {
   msgCount = (await sidePanelPage.$$('#messages .msg')).length;
   console.log(`✓ Sidepanel shows ${msgCount} message(s) after worker restart and refresh.`);
 
-  if (msgCount >= 1) {
-    console.log('✓ PASS: Messages persisted even after service worker restart.');
-  } else {
-    console.warn('⚠️  Expected at least 1 message, but got', msgCount);
+  if (msgCount < 1) {
+    throw new Error(`Expected at least 1 message after worker restart, but got ${msgCount}`);
   }
+  console.log('✓ PASS: Messages persisted even after service worker restart.');
 
   console.log('\n=== Test Case 3: Multiple Messages and Queue Integrity ===');
   console.log('Step 1: Send batch of 3 messages.');
@@ -101,11 +119,10 @@ const {
   msgCount = (await sidePanelPage.$$('#messages .msg')).length;
   console.log(`✓ Sidepanel shows ${msgCount} total message(s) in queue.`);
 
-  if (msgCount >= 3) {
-    console.log('✓ PASS: Queue correctly accumulated multiple messages.');
-  } else {
-    console.warn('⚠️  Expected at least 3 messages in queue, but got', msgCount);
+  if (msgCount < 3) {
+    throw new Error(`Expected at least 3 messages in queue, but got ${msgCount}`);
   }
+  console.log('✓ PASS: Queue correctly accumulated multiple messages.');
 
   console.log('\n=== Summary ===');
   console.log('✓ Service worker resilience tests completed.');
