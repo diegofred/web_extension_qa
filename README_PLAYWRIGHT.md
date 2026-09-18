@@ -62,7 +62,10 @@ To validate the compiled TypeScript library and its Playwright fixtures:
 npm run build
 npm run test:library
 npx playwright test tests/library_api_validation/playwright-fixtures.spec.js --workers=1
+npm run test:package
 ```
+
+`test:package` validates the packed artifact in an isolated local consumer. It does not publish the package or contact a production service.
 
 3. To test another extension, pass its directory as an argument:
 
@@ -125,9 +128,25 @@ You can reuse `tests/playwright-extension-helpers.js` in other projects because 
 
 This section is the user-facing reference for the helpers in this repository. The TypeScript API is exported from `src/index.ts` and is the recommended API for new tests. The standalone JavaScript helpers in `tests/playwright-extension-helpers.js` are also documented below because existing test scripts use them.
 
+### Installed package setup
+
+External test repositories should use Node.js 20 or newer and install the package alongside its Playwright peer:
+
+```bash
+npm install web-extension-qa @playwright/test
+```
+
+The package exposes its runtime and TypeScript declarations from the root import. The extension path passed to the helpers is owned by the consuming repository and must point to that repository's unpacked extension build.
+
+```ts
+import { expect, launchExtensionContext, test } from 'web-extension-qa';
+```
+
+The package metadata supports CommonJS consumers and TypeScript declaration resolution. This repository's `npm run test:package` command validates the same workflow from a local tarball without publishing it.
+
 ### TypeScript library API
 
-Import the library from the package entry point after running `npm run build`:
+For repository-local development, import the compiled library from the package entry point after running `npm run build`:
 
 ```ts
 import {
@@ -227,6 +246,12 @@ const session = await launchExtensionContext({
 ```
 
 Replace the former `launchExtensionContext(extensionPath, options)` call with the equivalent object form. Extension-specific runtime messages such as `OPEN_SIDE_PANEL` belong in consumer tests rather than generic library lifecycle helpers.
+
+## Package compatibility
+
+- Supported Node.js runtime: 20 or newer.
+- Supported Playwright peer: `@playwright/test` `^1.63.0`.
+- This repository prepares and validates the package locally; it does not publish to npm automatically.
 
 ## Notes
 

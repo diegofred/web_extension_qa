@@ -4,6 +4,20 @@
   "description": "Human-centered Playwright framework for Chrome extensions",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README_PLAYWRIGHT.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc",
     "test": "node tests/stateless_messages/run-all-tests.js",
@@ -11,7 +25,11 @@
     "test:worker": "node tests/stateless_messages/playwright-extension-worker-resilience.spec.js",
     "test:diagnostic": "node tests/stateless_messages/playwright-extension-diagnostic.spec.js",
     "test:library": "node tests/library_api_validation/playwright-library-api.spec.js",
-    "test:fixture-cleanup": "node tests/library_api_validation/run-fixture-cleanup-validation.js"
+    "test:fixture-cleanup": "node tests/library_api_validation/run-fixture-cleanup-validation.js",
+    "test:package": "node tests/package_validation/package-consumer-smoke.js"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.63.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
